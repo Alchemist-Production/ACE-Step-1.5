@@ -322,7 +322,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
 
                             with gr.Column(scale=1, min_width=100):
                                 random_desc_btn = gr.Button(
-                                    "🎲",
+                                    t("generation.random_btn"),
                                     variant="secondary",
                                     size="sm",
                                     scale=2
@@ -365,7 +365,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                         )
                         with gr.Column(scale=1, min_width=100):
                             sample_btn = gr.Button(
-                                "🎲",
+                                t("generation.random_btn"),
                                 variant="secondary",
                                 size="sm",
                                 scale=2,
@@ -668,11 +668,13 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                     label=t("generation.think_label"),
                     value=True,
                     scale=1,
+                    info=t("generation.think_info"),
                 )
                 allow_lm_batch = gr.Checkbox(
                     label=t("generation.parallel_thinking_label"),
                     value=True,
                     scale=1,
+                    info=t("generation.parallel_thinking_info"),
                 )
             with gr.Column(scale=18):
                 generate_btn = gr.Button(t("generation.generate_btn"), variant="primary", size="lg", interactive=generate_btn_interactive)

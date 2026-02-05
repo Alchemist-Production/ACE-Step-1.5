@@ -169,10 +169,13 @@
     "score_sensitivity_label": "质量评分敏感度",
     "score_sensitivity_info": "更低 = 更敏感(默认: 1.0). 调整PMI如何映射到[0,1]",
     "think_label": "思考",
+    "think_info": "启用思维链推理以获得更高质量的生成",
     "parallel_thinking_label": "并行思考",
+    "parallel_thinking_info": "允许并行批处理推理",
     "generate_btn": "🎵 生成音乐",
     "autogen_label": "自动生成",
-    "caption_rewrite_label": "描述重写"
+    "caption_rewrite_label": "描述重写",
+    "random_btn": "🎲 示例"
   },
   "results": {
     "title": "🎵 结果",

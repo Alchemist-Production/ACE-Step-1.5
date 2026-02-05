@@ -169,10 +169,13 @@
     "score_sensitivity_label": "Quality Score Sensitivity",
     "score_sensitivity_info": "Lower = more sensitive (default: 1.0). Adjusts how PMI maps to [0,1]",
     "think_label": "Think",
+    "think_info": "Enable Chain of Thought reasoning for higher quality generation",
     "parallel_thinking_label": "ParallelThinking",
+    "parallel_thinking_info": "Allow parallel batch processing for reasoning",
     "generate_btn": "🎵 Generate Music",
     "autogen_label": "AutoGen",
-    "caption_rewrite_label": "CaptionRewrite"
+    "caption_rewrite_label": "CaptionRewrite",
+    "random_btn": "🎲 Example"
   },
   "results": {
     "title": "🎵 Results",
