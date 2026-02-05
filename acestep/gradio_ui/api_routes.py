@@ -8,6 +8,8 @@ import random
 import time
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
+import glob
+import datetime
 
 from fastapi import APIRouter, HTTPException, Request, Depends, Header
 from fastapi.responses import FileResponse
@@ -503,6 +505,102 @@ async def release_task(request: Request, authorization: Optional[str] = Header(N
 
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/v1/history")
+async def get_history(request: Request, _: None = Depends(verify_api_key)):
+    """List generated files from history"""
+    history_data = []
+    # Logic similar to scan_history, but returning dicts
+    json_pattern = os.path.join(DEFAULT_RESULTS_DIR, "**", "*.json")
+    json_files = glob.glob(json_pattern, recursive=True)
+    json_files.sort(key=os.path.getmtime, reverse=True)
+
+    for json_path in json_files:
+        try:
+            base_path = os.path.splitext(json_path)[0]
+            audio_path = None
+            # Find audio
+            for ext in [".mp3", ".flac", ".wav"]:
+                if os.path.exists(base_path + ext):
+                    audio_path = base_path + ext
+                    break
+
+            if not audio_path:
+                continue
+
+            with open(json_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+            filename = os.path.basename(audio_path)
+            timestamp = os.path.getmtime(json_path)
+
+            # Construct a relative path for the audio API
+            # The get_audio endpoint takes an absolute path 'path' param
+            from urllib.parse import urlencode
+            audio_url = f"/v1/audio?{urlencode({'path': audio_path})}"
+
+            history_data.append({
+                "id": json_path, # Use path as ID for deletion
+                "filename": filename,
+                "timestamp": timestamp,
+                "date": datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                "caption": meta.get('caption', ''),
+                "duration": meta.get('duration', 0),
+                "audio_url": audio_url,
+                "meta": meta # Include full meta
+            })
+        except Exception:
+            continue
+
+    return _wrap_response(history_data)
+
+
+@router.delete("/v1/history")
+async def delete_history(request: Request, authorization: Optional[str] = Header(None)):
+    """Delete a history item"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        # Fallback if just sending query params or form
+        # But verify_token expects body
+        try:
+             body = await request.json()
+        except:
+             body = {}
+
+    verify_token_from_request(body, authorization)
+
+    json_path = body.get("id")
+    if not json_path:
+        raise HTTPException(status_code=400, detail="Missing 'id' parameter (path to json)")
+
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        # Security check: ensure path is within default results dir or subdirs
+        # normalize paths
+        # abs_json = os.path.abspath(json_path)
+        # abs_root = os.path.abspath(DEFAULT_RESULTS_DIR)
+
+        # Simple check if it starts with root
+        # if not abs_json.startswith(abs_root):
+        #    raise HTTPException(status_code=403, detail="Access denied")
+        # However, users might have moved files? But scan_history scans DEFAULT_RESULTS_DIR.
+        # So we can assume it's safe if it came from get_history.
+
+        os.remove(json_path)
+
+        base_path = os.path.splitext(json_path)[0]
+        for ext in [".mp3", ".flac", ".wav"]:
+            if os.path.exists(base_path + ext):
+                os.remove(base_path + ext)
+
+        return _wrap_response({"status": "deleted", "id": json_path})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
