@@ -1,7 +1,9 @@
-import React from 'react';
-import { Music, ListMusic, Settings, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Music, ListMusic, Settings, Activity, Book } from 'lucide-react';
+import HelpModal from './HelpModal';
 
 const Layout = ({ children, activeTab, setActiveTab }) => {
+  const [showHelp, setShowHelp] = useState(false);
   const navItems = [
     { id: 'generator', icon: Music, label: 'Create' },
     { id: 'library', icon: ListMusic, label: 'Library' },
@@ -32,6 +34,13 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
               <span className="font-medium">{item.label}</span>
             </button>
           ))}
+          <button
+            onClick={() => setShowHelp(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+          >
+            <Book size={20} />
+            <span className="font-medium">Guide</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-border">
@@ -45,6 +54,8 @@ const Layout = ({ children, activeTab, setActiveTab }) => {
       <div className="flex-1 overflow-hidden bg-dark relative">
         {children}
       </div>
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   );
 };
