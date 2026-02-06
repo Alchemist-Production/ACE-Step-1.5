@@ -294,6 +294,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                         with gr.Row(equal_height=True):
                             repainting_start = gr.Number(
                                 label=t("generation.repainting_start"),
+                                info=t("generation.repainting_start_info"),
                                 value=0.0,
                                 step=0.1,
                                 scale=2,
@@ -305,6 +306,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                             )
                             repainting_end = gr.Number(
                                 label=t("generation.repainting_end"),
+                                info=t("generation.repainting_end_info"),
                                 value=-1,
                                 minimum=-1,
                                 step=0.1,
