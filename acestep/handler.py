@@ -132,6 +132,14 @@ class AceStepHandler:
     
     def is_turbo_model(self) -> bool:
         """Check if the currently loaded model is a turbo model"""
+        # Fallback to path check if config doesn't specify or to override
+        if self.loaded_config_path:
+            path_lower = self.loaded_config_path.lower()
+            if "turbo" in path_lower:
+                return True
+            if "sft" in path_lower:
+                return False
+
         if self.config is None:
             return False
         return getattr(self.config, 'is_turbo', False)

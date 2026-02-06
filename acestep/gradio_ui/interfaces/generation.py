@@ -479,6 +479,38 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                             info=t("generation.batch_size_info") + f" (Max: {max_batch_size})",
                             interactive=not service_mode  # Fixed in service mode
                         )
+
+                    # Moved from Advanced Settings to Optional Parameters
+                    with gr.Row():
+                        inference_steps = gr.Slider(
+                            minimum=1,
+                            maximum=20,
+                            value=8,
+                            step=1,
+                            label=t("generation.inference_steps_label"),
+                            info=t("generation.inference_steps_info"),
+                            visible=True
+                        )
+                        guidance_scale = gr.Slider(
+                            minimum=1.0,
+                            maximum=15.0,
+                            value=7.0,
+                            step=0.1,
+                            label=t("generation.guidance_scale_label"),
+                            info=t("generation.guidance_scale_info"),
+                            visible=False
+                        )
+                        with gr.Column():
+                            seed = gr.Textbox(
+                                label=t("generation.seed_label"),
+                                value="-1",
+                                info=t("generation.seed_info")
+                            )
+                            random_seed_checkbox = gr.Checkbox(
+                                label=t("generation.random_seed_label"),
+                                value=True,
+                                info=t("generation.random_seed_info")
+                            )
         
         # Advanced Settings
         # Default UI settings use turbo mode (max 20 steps, default 8, show shift with default 3)
@@ -486,35 +518,6 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
         with gr.Accordion(t("generation.advanced_settings"), open=False):
             gr.HTML(f"<h4>{t('generation.dit_params_title') if t('generation.dit_params_title') != 'generation.dit_params_title' else 'DiT Parameters'}</h4>")
             with gr.Row():
-                inference_steps = gr.Slider(
-                    minimum=1,
-                    maximum=20,
-                    value=8,
-                    step=1,
-                    label=t("generation.inference_steps_label"),
-                    info=t("generation.inference_steps_info"),
-                    visible=True
-                )
-                guidance_scale = gr.Slider(
-                    minimum=1.0,
-                    maximum=15.0,
-                    value=7.0,
-                    step=0.1,
-                    label=t("generation.guidance_scale_label"),
-                    info=t("generation.guidance_scale_info"),
-                    visible=False
-                )
-                with gr.Column():
-                    seed = gr.Textbox(
-                        label=t("generation.seed_label"),
-                        value="-1",
-                        info=t("generation.seed_info")
-                    )
-                    random_seed_checkbox = gr.Checkbox(
-                        label=t("generation.random_seed_label"),
-                        value=True,
-                        info=t("generation.random_seed_info")
-                    )
                 audio_format = gr.Dropdown(
                     choices=["mp3", "flac"],
                     value="mp3",
