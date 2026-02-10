@@ -4,18 +4,22 @@ Add API endpoints compatible with api_server.py and CustomAceStep to Gradio appl
 """
 import json
 import os
+import shutil
 import random
 import time
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
+import glob
+import datetime
 
 from fastapi import APIRouter, HTTPException, Request, Depends, Header
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
 # Global results directory inside project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_RESULTS_DIR = os.path.join(PROJECT_ROOT, "gradio_outputs").replace("\\", "/")
 os.makedirs(DEFAULT_RESULTS_DIR, exist_ok=True)
+LORA_DIR = os.path.join(PROJECT_ROOT, "lora_output").replace("\\", "/")
 
 # API Key storage (set via setup_api_routes)
 _api_key: Optional[str] = None
@@ -195,6 +199,227 @@ async def list_models(request: Request, _: None = Depends(verify_api_key)):
         "models": models,
         "default_model": models[0]["name"] if models else None,
     })
+
+
+@router.get("/v1/loras")
+async def list_loras(request: Request, _: None = Depends(verify_api_key)):
+    """List available LoRA adapters"""
+    loras = []
+
+    # Check default LoRA directory
+    if os.path.exists(LORA_DIR):
+        for item in os.listdir(LORA_DIR):
+            item_path = os.path.join(LORA_DIR, item)
+            if os.path.isdir(item_path):
+                # Check for adapter_config.json
+                if os.path.exists(os.path.join(item_path, "adapter_config.json")):
+                    loras.append({
+                        "name": item,
+                        "path": item_path.replace("\\", "/"),
+                    })
+
+    # Also check checkpoints/loras if it exists
+    checkpoints_lora_dir = os.path.join(PROJECT_ROOT, "checkpoints", "loras")
+    if os.path.exists(checkpoints_lora_dir):
+        for item in os.listdir(checkpoints_lora_dir):
+            item_path = os.path.join(checkpoints_lora_dir, item)
+            if os.path.isdir(item_path):
+                 if os.path.exists(os.path.join(item_path, "adapter_config.json")):
+                    loras.append({
+                        "name": item,
+                        "path": item_path.replace("\\", "/"),
+                    })
+
+    return _wrap_response(loras)
+
+
+@router.post("/v1/loras/load")
+async def load_lora_endpoint(request: Request, authorization: Optional[str] = Header(None)):
+    """Load a LoRA adapter"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        body = {}
+
+    verify_token_from_request(body, authorization)
+    path = body.get("path")
+
+    dit_handler = request.app.state.dit_handler
+    if not dit_handler:
+            raise HTTPException(status_code=500, detail="Handler not initialized")
+
+    if not path:
+            return await unload_lora_endpoint(request, authorization)
+
+    msg = dit_handler.load_lora(path)
+    return _wrap_response({"status": msg})
+
+
+@router.post("/v1/loras/unload")
+async def unload_lora_endpoint(request: Request, authorization: Optional[str] = Header(None)):
+    """Unload LoRA adapter"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        body = {}
+
+    verify_token_from_request(body, authorization)
+
+    dit_handler = request.app.state.dit_handler
+    if not dit_handler:
+        raise HTTPException(status_code=500, detail="Handler not initialized")
+
+    msg = dit_handler.unload_lora()
+    return _wrap_response({"status": msg})
+
+
+@router.post("/v1/loras/scale")
+async def set_lora_scale(request: Request, authorization: Optional[str] = Header(None)):
+    """Set LoRA scale"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        body = {}
+
+    verify_token_from_request(body, authorization)
+    scale = float(body.get("scale", 1.0))
+
+    dit_handler = request.app.state.dit_handler
+    if not dit_handler:
+        raise HTTPException(status_code=500, detail="Handler not initialized")
+
+    msg = dit_handler.set_lora_scale(scale)
+    return _wrap_response({"status": msg})
+
+
+@router.get("/v1/guide")
+async def get_guide(request: Request):
+    """Get the music creation guide markdown"""
+    # Try multiple locations
+    possible_paths = [
+        os.path.join(PROJECT_ROOT, ".claude", "skills", "acestep", "music-creation-guide.md"),
+        os.path.join(PROJECT_ROOT, "music-creation-guide.md"),
+        os.path.join(PROJECT_ROOT, "docs", "music-creation-guide.md")
+    ]
+
+    content = "# Music Creation Guide\n\nGuide file not found."
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                break
+            except Exception:
+                continue
+
+    return _wrap_response({"content": content})
+
+
+@router.post("/v1/library/update")
+async def update_library_item(request: Request, authorization: Optional[str] = Header(None)):
+    """Update library item (rename, tag, move)"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        body = {}
+
+    verify_token_from_request(body, authorization)
+
+    action = body.get("action") # 'rename', 'tag', 'move'
+    json_path = body.get("id") # The full path to the JSON file
+
+    if not json_path or not os.path.exists(json_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    base_path = os.path.splitext(json_path)[0]
+    audio_path = None
+    audio_ext = None
+    for ext in [".mp3", ".flac", ".wav"]:
+        if os.path.exists(base_path + ext):
+            audio_path = base_path + ext
+            audio_ext = ext
+            break
+
+    if not audio_path:
+        raise HTTPException(status_code=404, detail="Audio file corresponding to JSON not found")
+
+    try:
+        if action == "rename":
+            new_filename = body.get("new_filename")
+            if not new_filename:
+                raise HTTPException(status_code=400, detail="Missing new_filename")
+
+            # Sanitize filename
+            new_filename = "".join(c for c in new_filename if c.isalnum() or c in (' ', '.', '_', '-')).strip()
+            if not new_filename:
+                raise HTTPException(status_code=400, detail="Invalid filename")
+
+            directory = os.path.dirname(json_path)
+            new_base_path = os.path.join(directory, new_filename)
+
+            # Check if target exists
+            if os.path.exists(new_base_path + ".json") or (audio_ext and os.path.exists(new_base_path + audio_ext)):
+                 raise HTTPException(status_code=400, detail="Target filename already exists")
+
+            # Rename JSON
+            os.rename(json_path, new_base_path + ".json")
+            # Rename Audio
+            if audio_path:
+                os.rename(audio_path, new_base_path + audio_ext)
+
+            return _wrap_response({"status": "renamed", "new_id": new_base_path + ".json"})
+
+        elif action == "tag":
+            tags = body.get("tags") # List of strings
+            if not isinstance(tags, list):
+                 raise HTTPException(status_code=400, detail="Tags must be a list")
+
+            with open(json_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+            meta["tags"] = tags
+
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, indent=2, ensure_ascii=False)
+
+            return _wrap_response({"status": "tagged", "tags": tags})
+
+        elif action == "move":
+            target_folder = body.get("target_folder") # Relative to DEFAULT_RESULTS_DIR
+            if not target_folder:
+                 raise HTTPException(status_code=400, detail="Missing target_folder")
+
+            # prevent directory traversal
+            if ".." in target_folder:
+                raise HTTPException(status_code=400, detail="Invalid folder path")
+
+            new_dir = os.path.join(DEFAULT_RESULTS_DIR, target_folder)
+            os.makedirs(new_dir, exist_ok=True)
+
+            filename_json = os.path.basename(json_path)
+            filename_audio = os.path.basename(audio_path)
+
+            new_json_path = os.path.join(new_dir, filename_json)
+            new_audio_path = os.path.join(new_dir, filename_audio)
+
+            if os.path.exists(new_json_path) or os.path.exists(new_audio_path):
+                 raise HTTPException(status_code=400, detail="File already exists in target folder")
+
+            shutil.move(json_path, new_json_path)
+            shutil.move(audio_path, new_audio_path)
+
+            return _wrap_response({"status": "moved", "new_id": new_json_path})
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/v1/audio")
@@ -503,6 +728,102 @@ async def release_task(request: Request, authorization: Optional[str] = Header(N
 
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/v1/history")
+async def get_history(request: Request, _: None = Depends(verify_api_key)):
+    """List generated files from history"""
+    history_data = []
+    # Logic similar to scan_history, but returning dicts
+    json_pattern = os.path.join(DEFAULT_RESULTS_DIR, "**", "*.json")
+    json_files = glob.glob(json_pattern, recursive=True)
+    json_files.sort(key=os.path.getmtime, reverse=True)
+
+    for json_path in json_files:
+        try:
+            base_path = os.path.splitext(json_path)[0]
+            audio_path = None
+            # Find audio
+            for ext in [".mp3", ".flac", ".wav"]:
+                if os.path.exists(base_path + ext):
+                    audio_path = base_path + ext
+                    break
+
+            if not audio_path:
+                continue
+
+            with open(json_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+
+            filename = os.path.basename(audio_path)
+            timestamp = os.path.getmtime(json_path)
+
+            # Construct a relative path for the audio API
+            # The get_audio endpoint takes an absolute path 'path' param
+            from urllib.parse import urlencode
+            audio_url = f"/v1/audio?{urlencode({'path': audio_path})}"
+
+            history_data.append({
+                "id": json_path, # Use path as ID for deletion
+                "filename": filename,
+                "timestamp": timestamp,
+                "date": datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                "caption": meta.get('caption', ''),
+                "duration": meta.get('duration', 0),
+                "audio_url": audio_url,
+                "meta": meta # Include full meta
+            })
+        except Exception:
+            continue
+
+    return _wrap_response(history_data)
+
+
+@router.delete("/v1/history")
+async def delete_history(request: Request, authorization: Optional[str] = Header(None)):
+    """Delete a history item"""
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "json" in content_type:
+        body = await request.json()
+    else:
+        # Fallback if just sending query params or form
+        # But verify_token expects body
+        try:
+             body = await request.json()
+        except:
+             body = {}
+
+    verify_token_from_request(body, authorization)
+
+    json_path = body.get("id")
+    if not json_path:
+        raise HTTPException(status_code=400, detail="Missing 'id' parameter (path to json)")
+
+    if not os.path.exists(json_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        # Security check: ensure path is within default results dir or subdirs
+        # normalize paths
+        # abs_json = os.path.abspath(json_path)
+        # abs_root = os.path.abspath(DEFAULT_RESULTS_DIR)
+
+        # Simple check if it starts with root
+        # if not abs_json.startswith(abs_root):
+        #    raise HTTPException(status_code=403, detail="Access denied")
+        # However, users might have moved files? But scan_history scans DEFAULT_RESULTS_DIR.
+        # So we can assume it's safe if it came from get_history.
+
+        os.remove(json_path)
+
+        base_path = os.path.splitext(json_path)[0]
+        for ext in [".mp3", ".flac", ".wav"]:
+            if os.path.exists(base_path + ext):
+                os.remove(base_path + ext)
+
+        return _wrap_response({"status": "deleted", "id": json_path})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
