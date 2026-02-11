@@ -89,7 +89,7 @@
     "mode_custom": "自定义",
     "simple_query_label": "歌曲描述",
     "simple_query_placeholder": "描述你想创作的音乐，例如：'给我生成一首暗黑的戏剧古风，歌词要华丽'。留空则随机生成样本。",
-    "simple_query_info": "输入你想生成的音乐的自然语言描述",
+    "simple_query_info": "输入你想生成的音乐的自然语言描述。点击 🎲 随机 获取示例。",
     "simple_vocal_language_label": "人声语言(可选)",
     "simple_vocal_language_info": "选择歌词的首选语言。使用 'unknown' 表示任意语言。",
     "create_sample_btn": "创建样本",
