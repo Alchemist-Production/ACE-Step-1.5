@@ -89,7 +89,7 @@
     "mode_custom": "カスタム",
     "simple_query_label": "曲の説明",
     "simple_query_placeholder": "作成したい音楽を説明してください。例：'静かな夜のための優しいベンガルのラブソング'。空欄の場合はランダムなサンプルが生成されます。",
-    "simple_query_info": "生成したい音楽の自然言語の説明を入力",
+    "simple_query_info": "生成したい音楽の自然言語の説明を入力。🎲 ランダム をクリックして例を表示します。",
     "simple_vocal_language_label": "ボーカル言語(オプション)",
     "simple_vocal_language_info": "歌詞の希望言語を選択。任意の言語の場合は'unknown'を使用。",
     "create_sample_btn": "サンプル作成",
