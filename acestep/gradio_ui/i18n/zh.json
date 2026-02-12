@@ -243,5 +243,29 @@
     "invalid_timesteps_format": "⚠️ 时间步格式无效，使用默认调度。",
     "timesteps_out_of_range": "⚠️ 时间步必须在 [0, 1] 范围内，使用默认调度。",
     "timesteps_count_mismatch": "⚠️ 时间步数量 ({actual}) 与推理步数 ({expected}) 不匹配，将使用时间步数量。"
+  },
+  "history": {
+    "tab_title": "📚 历史记录",
+    "header": "生成历史",
+    "subtitle": "查看过去的生成记录并重新加载设置",
+    "refresh_btn": "🔄 刷新",
+    "table_label": "生成的文件",
+    "table_headers": {
+      "select": "选择",
+      "id": "ID",
+      "filename": "文件名",
+      "date": "日期",
+      "caption": "描述",
+      "duration": "时长"
+    },
+    "details_header": "详情",
+    "audio_preview_label": "音频预览",
+    "metadata_label": "完整元数据",
+    "send_to_src_btn": "🎵 发送到源音频",
+    "send_to_ref_btn": "🎹 发送到参考音频",
+    "load_params_btn": "📋 加载参数到生成标签页",
+    "delete_preview_btn": "🗑️ 删除预览项",
+    "delete_selected_btn": "🗑️ 删除选中项",
+    "status_label": "状态"
   }
 }

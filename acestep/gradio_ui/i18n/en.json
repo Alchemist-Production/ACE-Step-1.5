@@ -256,5 +256,29 @@
     "invalid_timesteps_format": "⚠️ Invalid timesteps format. Using default schedule.",
     "timesteps_out_of_range": "⚠️ Timesteps must be in range [0, 1]. Using default schedule.",
     "timesteps_count_mismatch": "⚠️ Timesteps count ({actual}) differs from inference_steps ({expected}). Using timesteps count."
+  },
+  "history": {
+    "tab_title": "📚 History",
+    "header": "Generation History",
+    "subtitle": "View past generations and reload their settings",
+    "refresh_btn": "🔄 Refresh",
+    "table_label": "Generated Files",
+    "table_headers": {
+      "select": "Select",
+      "id": "ID",
+      "filename": "Filename",
+      "date": "Date",
+      "caption": "Caption",
+      "duration": "Duration"
+    },
+    "details_header": "Details",
+    "audio_preview_label": "Audio Preview",
+    "metadata_label": "Full Metadata",
+    "send_to_src_btn": "🎵 Send to Source Audio",
+    "send_to_ref_btn": "🎹 Send to Reference Audio",
+    "load_params_btn": "📋 Load Parameters to Generation Tab",
+    "delete_preview_btn": "🗑️ Delete Preview",
+    "delete_selected_btn": "🗑️ Delete Checked",
+    "status_label": "Status"
   }
 }
