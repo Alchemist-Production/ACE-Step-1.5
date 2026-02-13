@@ -297,6 +297,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                                 value=0.0,
                                 step=0.1,
                                 scale=2,
+                                info=t("generation.repainting_start_info"),
                             )
                             set_start_btn = gr.Button(
                                 t("generation.set_start_btn"),
@@ -309,6 +310,7 @@ def create_generation_section(dit_handler, llm_handler, init_params=None, langua
                                 minimum=-1,
                                 step=0.1,
                                 scale=2,
+                                info=t("generation.repainting_end_info"),
                             )
                             set_end_btn = gr.Button(
                                 t("generation.set_end_btn"),
